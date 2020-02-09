@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ChatClient {
-    private static String matNr = "382225";
+    private static String matNr;
     private static String user;
     private static String secNr;
     private static String createMsg;
@@ -17,62 +17,25 @@ public class ChatClient {
 
     public static void main(String[] args) {
 
-        try {
-            // Setup
-            Socket s = new Socket("vm1.mcc.tu-berlin.de",8080);
-            BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
-            InputStream is = s.getInputStream();
+        // Assign each Command an Integer
+        Map<Command, Integer> commandIntegerMap = new HashMap<>();
+        for (int i = 0; i < Command.values().length; i++) {
+            commandIntegerMap.put(Command.values()[i], i);
+        }
 
-            //write(bos, is, "0 peterpan2 1");
-            System.out.println("----------------------");
-            //write(bos, is, "4 peterpan2 1 997 up");
-            //write(bos, is, "2 peterpan2 1 Das \nist\neine\nlange\nNachricht!\nYES!");
-            write(bos, is, "5 peterpan2 1 10000");
-            System.out.println("----------------------");
-            System.out.println("socket is connected: " + s.isConnected());
-            System.out.println("socket is connected: " + s.isConnected());
-            write(bos, is, "5 peterpan2 1 2");
-            System.out.println("----------------------");
-            write(bos, is, "5 peterpan2 1 2");
-            System.out.println("----------------------");
+        // Request initial data from user
+        setMatNr();
 
-            /*
-            // Assign each Command an Integer
-            Map<Command, Integer> commandIntegerMap = new HashMap<>();
-            for (int i = 0; i < Command.values().length; i++) {
-                commandIntegerMap.put(Command.values()[i], i);
-            }
-
-            // Request initial data from user
-            setMatNr();
-            setUser();
-            setSecNr();
-            refreshVariables();
-
-            // Program loop
-            Command selectedCommand = Command.REGISTER;
-            do {
-                write(  bos,
-                        is,
-                        String.valueOf(commandIntegerMap.get(selectedCommand))
-                            + user
-                            + secNr
-                            + createMsg
-                            + number
-                            + upDown
-                    );
-                System.out.println("server: " + read(is));
-            } while((selectedCommand = setCommand()) != Command.QUIT);
-
-            // Close Streams
-            bos.close();
-            is.close();
-            s.close();
-
-
-             */
-        } catch(IOException e) {
-            System.out.println(e.getMessage());
+        // Program loop
+        Command selectedCommand;
+        while((selectedCommand = setCommand()) != Command.QUIT) {
+            write(String.valueOf(commandIntegerMap.get(selectedCommand)) + " "
+                        + user + " "
+                        + secNr
+                        + createMsg
+                        + number
+                        + upDown
+                );
         }
     }
 
@@ -80,7 +43,8 @@ public class ChatClient {
         while(true) {
             refreshVariables();
             String tmp = readConsole(
-                    "[r]egister [u]nblock [c]reate [d]elete [v]ote [g]etBoard [q]uit ").toLowerCase();
+                    "user " + user + " password " + secNr + " ([s]etUser)\n" +
+                            "[r]egister [u]nblock [c]reate [d]elete [v]ote [g]etBoard [q]uit ").toLowerCase();
             switch (tmp) {
                 case "r": // register
                     setUser();
@@ -92,15 +56,19 @@ public class ChatClient {
                     createMsg = " " + readConsole("Message to create: ");
                     return Command.CREATE;
                 case "d": // delete
-                    number = " " + readConsole("post-ID to delete: ");
+                    number = " " + readConsole("ID to delete: ");
                     return Command.DELETE;
                 case "v": // vote
-                    number = " " + readConsole("post-ID to vote");
+                    number = " " + readConsole("ID to vote: ");
                     setUpDown();
                     return Command.VOTE;
                 case "g": // getBoard
                     number = " " + readConsole("number of random posts to list: ");
                     return Command.GETBOARD;
+                case "s": // setUser
+                    setUser();
+                    setSecNr();
+                    return setCommand();
                 case "q": // quit
                     System.out.println("bye");
                     return Command.QUIT;
@@ -130,33 +98,34 @@ public class ChatClient {
 
     private static void setUser() {
         do {
-            user = " " + readConsole("username: ");
-        } while(user.length() <= 1);
+            user = readConsole("username: ");
+        } while(user.length() == 0);
     }
 
     private static void setSecNr() {
         do {
-            secNr = " " + readConsole("secNr: ");
-        } while(secNr.length() == 1);
+            secNr = readConsole("secNr: ");
+        } while(secNr.length() == 0);
     }
 
-    private static void write(BufferedOutputStream bos, InputStream is, String msg) throws IOException{
-        System.out.println("sending: " + msg);
-        // Authenticate with matNr
-        if(matNr == null) throw new IOException("MatNr not defined");
-        bos.write(matNr.getBytes()); bos.flush();
-        bos.write(-1); bos.flush();
-        String serverText = read(is);
-        System.out.println(serverText);
-        if(!serverText.equals("Authentication ok")) throw new IOException("Authentication failed.");
+    private static void write(String msg) {
+        try(Socket s = new Socket("vm1.mcc.tu-berlin.de",8080);
+            BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
+            InputStream is = s.getInputStream()) {
 
-        // write msg and return answer string
-        bos.write(msg.getBytes()); bos.flush();
-        bos.write(-1); bos.flush();
+            // Authenticate
+            bos.write(matNr.getBytes()); bos.flush(); bos.write(-1); bos.flush();
+            String serverText = read(is);
+            if(!serverText.equals("Authentication ok")) throw new IOException("Authentication failed, server: " + serverText);
 
-        // print reply
-        serverText = read(is);
-        System.out.println(serverText);
+            // send msg
+            bos.write(msg.getBytes()); bos.flush(); bos.write(-1); bos.flush();
+
+            // print reply
+            System.out.println(read(is));
+        } catch(IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private static String read(InputStream is) throws IOException {
