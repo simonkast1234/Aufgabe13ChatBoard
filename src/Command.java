@@ -1,0 +1,3 @@
+public enum Command {
+    REGISTER,UNBLOCK,CREATE,DELETE,VOTE,GETBOARD,QUIT;
+}
