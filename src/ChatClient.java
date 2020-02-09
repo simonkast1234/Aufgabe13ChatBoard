@@ -7,18 +7,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.Thread.sleep;
+
 public class ChatClient {
     private static String matNr;
     private static String user;
     private static String secNr;
-    private static String createMsg;
-    private static String number;
-    private static String upDown;
+    public static String createMsg;
+    public static String number;
+    public static String upDown;
+    public static Map<Command, Integer> commandIntegerMap = new HashMap<>();
+    public static Command selectedCommand;
 
     public static void main(String[] args) {
 
         // Assign each Command an Integer
-        Map<Command, Integer> commandIntegerMap = new HashMap<>();
         for (int i = 0; i < Command.values().length; i++) {
             commandIntegerMap.put(Command.values()[i], i);
         }
@@ -27,7 +30,7 @@ public class ChatClient {
         setMatNr();
 
         // Program loop
-        Command selectedCommand;
+
         while((selectedCommand = setCommand()) != Command.QUIT) {
             write(String.valueOf(commandIntegerMap.get(selectedCommand)) + " "
                         + user + " "
@@ -54,6 +57,7 @@ public class ChatClient {
                     return Command.UNBLOCK;
                 case "c": // create
                     createMsg = " " + readConsole("Message to create: ");
+                    spamThreads();
                     return Command.CREATE;
                 case "d": // delete
                     number = " " + readConsole("ID to delete: ");
@@ -61,6 +65,7 @@ public class ChatClient {
                 case "v": // vote
                     number = " " + readConsole("ID to vote: ");
                     setUpDown();
+                    spamThreads();
                     return Command.VOTE;
                 case "g": // getBoard
                     number = " " + readConsole("number of random posts to list: ");
@@ -73,6 +78,21 @@ public class ChatClient {
                     System.out.println("bye");
                     return Command.QUIT;
             }
+        }
+    }
+
+    private static void spamThreads() {
+        String numberOfThread = readConsole("how many times?");
+        int threadsBefore = Thread.activeCount();
+        for (int i = 0; i < Integer.parseInt(numberOfThread) - 1; i++) {
+            new Thread(new SpamThread()).start();
+        }
+        try {
+            while(Thread.activeCount() > threadsBefore) {
+                sleep(100);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -108,7 +128,7 @@ public class ChatClient {
         } while(secNr.length() == 0);
     }
 
-    private static void write(String msg) {
+    public static void write(String msg) {
         try(Socket s = new Socket("vm1.mcc.tu-berlin.de",8080);
             BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
             InputStream is = s.getInputStream()) {
