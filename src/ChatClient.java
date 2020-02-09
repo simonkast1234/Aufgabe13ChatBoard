@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ChatClient {
-    private static String matNr;
+    private static String matNr = "382225";
     private static String user;
     private static String secNr;
     private static String createMsg;
@@ -23,6 +23,20 @@ public class ChatClient {
             BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
             InputStream is = s.getInputStream();
 
+            //write(bos, is, "0 peterpan2 1");
+            System.out.println("----------------------");
+            //write(bos, is, "4 peterpan2 1 997 up");
+            //write(bos, is, "2 peterpan2 1 Das \nist\neine\nlange\nNachricht!\nYES!");
+            write(bos, is, "5 peterpan2 1 10000");
+            System.out.println("----------------------");
+            System.out.println("socket is connected: " + s.isConnected());
+            System.out.println("socket is connected: " + s.isConnected());
+            write(bos, is, "5 peterpan2 1 2");
+            System.out.println("----------------------");
+            write(bos, is, "5 peterpan2 1 2");
+            System.out.println("----------------------");
+
+            /*
             // Assign each Command an Integer
             Map<Command, Integer> commandIntegerMap = new HashMap<>();
             for (int i = 0; i < Command.values().length; i++) {
@@ -55,10 +69,11 @@ public class ChatClient {
             is.close();
             s.close();
 
+
+             */
         } catch(IOException e) {
             System.out.println(e.getMessage());
         }
-
     }
 
     private static Command setCommand() {
@@ -125,19 +140,23 @@ public class ChatClient {
         } while(secNr.length() == 1);
     }
 
-    private static String write(BufferedOutputStream bos, InputStream is, String msg) throws IOException{
-        System.out.println("sending:" + msg);
-        // Authenticate
+    private static void write(BufferedOutputStream bos, InputStream is, String msg) throws IOException{
+        System.out.println("sending: " + msg);
+        // Authenticate with matNr
         if(matNr == null) throw new IOException("MatNr not defined");
         bos.write(matNr.getBytes()); bos.flush();
         bos.write(-1); bos.flush();
-        if(!read(is).equals("Authentication ok")) throw new IOException("Authentication failed. Server says " + read(is));
-        System.out.println("Authentication ok");
+        String serverText = read(is);
+        System.out.println(serverText);
+        if(!serverText.equals("Authentication ok")) throw new IOException("Authentication failed.");
 
         // write msg and return answer string
         bos.write(msg.getBytes()); bos.flush();
         bos.write(-1); bos.flush();
-        return read(is);
+
+        // print reply
+        serverText = read(is);
+        System.out.println(serverText);
     }
 
     private static String read(InputStream is) throws IOException {
@@ -146,7 +165,6 @@ public class ChatClient {
             data.add((byte)is.read());
         } while(!data.get(data.size()-1).equals(Byte.valueOf("-1")));
         data.remove(data.size()-1);
-
 
         String dataString = "";
         for (int i = 0; i < data.size(); i++) {
