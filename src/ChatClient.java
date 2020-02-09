@@ -11,7 +11,7 @@ import static java.lang.Thread.sleep;
 
 public class ChatClient {
     private static String matNr;
-    private static String user;
+    public static String user;
     private static String secNr;
     public static String createMsg;
     public static String number;
@@ -63,8 +63,10 @@ public class ChatClient {
                     number = " " + readConsole("ID to delete: ");
                     return Command.DELETE;
                 case "v": // vote
+                    refreshVariables();
                     number = " " + readConsole("ID to vote: ");
                     setUpDown();
+                    selectedCommand = Command.VOTE;
                     spamThreads();
                     return Command.VOTE;
                 case "g": // getBoard
@@ -82,7 +84,7 @@ public class ChatClient {
     }
 
     private static void spamThreads() {
-        String numberOfThread = readConsole("how many times?");
+        String numberOfThread = readConsole("how many times? ");
         int threadsBefore = Thread.activeCount();
         for (int i = 0; i < Integer.parseInt(numberOfThread) - 1; i++) {
             new Thread(new SpamThread()).start();
